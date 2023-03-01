@@ -82,7 +82,6 @@ function heatmap_display(url, heatmapId, paletteName) {
 
         var rowSortOrder = false;
         var colSortOrder = false;
-
         var rowLabels = svg.append("g")
             .attr("class", "rowLabels")
             .selectAll(".rowLabel")
@@ -106,9 +105,54 @@ function heatmap_display(url, heatmapId, paletteName) {
             })
             .on('mouseover', function(d, i) {
                 d3.select('#rowLabel_' + i).classed("hover", true);
+                var w = 400;
+                var h = 400;
+                var r = h/2;
+                var chart = [];
+                for(var k = 0; k < 10; k++){
+                    chart.push(0);
+                }
+                for(var j = 0; j < data.data[i].length; j++){
+                    //console.log(Math.floor(data.data[i][j] * 10));
+                    if(!data.data[i][j]){
+                        continue;
+                    }
+                    if(data.data[i][j] < 0){
+                        chart[0]++;
+                        continue;
+                    }
+                    chart[Math.floor(data.data[i][j] * 10)]++;
+                }
+
+                var vis = svg.data([chart]).attr("width", w).attr("height", h).append("svg:g").attr("transform", "translate(" + 400 + "," + 400 + ")");
+                var pie = d3.layout.pie().value(function(d){
+                    if(!d || d < 0)
+                        return 0;
+                    return d;
+                });
+
+                // Declare an arc generator function
+                var arc = d3.svg.arc().outerRadius(r).innerRadius(r/2);
+
+                // Select paths, use arc generator to draw
+                var arcs = vis.selectAll("g.slice").data(pie).enter().append("svg:g").attr("class", "slice");
+                var count = -1;
+                arcs.append("svg:path")
+                    .attr("fill", function(d){
+                        count++;
+                        return colorScale(count/10);
+                    })
+                    .attr("d", function (d) {
+                        //console.log(d);
+                        if(!d.data || d.data < 0){
+                            d.data = 0;
+                        }
+                        return arc(d);
+                    })
             })
             .on('mouseout', function(d, i) {
                 d3.select('#rowLabel_' + i).classed("hover", false);
+                //vis.style("visibility", "hidden");
             })
             .on("click", function(d, i) {
                 rowSortOrder = !rowSortOrder;
@@ -167,7 +211,6 @@ function heatmap_display(url, heatmapId, paletteName) {
             })
             .enter().append("svg:rect")
             .attr("id", function(d){
-                console.log(Math.floor(d * 10) / 10, d);
                 if(!d){
                     return 'value_NaN';
                 }
@@ -262,6 +305,7 @@ function heatmap_display(url, heatmapId, paletteName) {
             })
             .attr("y", viewerPosTop + cellSize);
         //color chart
+
 
         //==================================================
         // Change ordering of cells
